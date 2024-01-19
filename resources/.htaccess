@@ -1,0 +1,5 @@
+AuthType Basic
+AuthName "Restricted Access"
+AuthUserFile /var/www/.htpasswd_spothinta
+Require valid-user
+Options Indexes FollowSymLinks

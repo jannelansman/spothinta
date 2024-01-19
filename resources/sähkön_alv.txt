@@ -1,0 +1,24 @@
+sahko.tk:sta (Tarkistin muualta, niin vaikutti, että ainakin vuonna 2014 sähkön alv olisi ollut jo 24%).
+
+Ajankohtaista
+1.5.2023 alkaen sähkön arvonlisävero on jälleen 24 %. Kuvaajassa aikavälin 1.12.2022 - 30.4.2023 hinnat ovat alv 10 %.
+
+Hallitus on päättänyt sähkön energiamaksun väliaikaisesta arvonlisäveron alennuksesta. Joulukuusta 2022 alkaen sähkön alv on 10 %. Alennus on tällä päätöksellä voimassa huhtikuun 2023 loppuun asti.
+
+Mitä on pörssisähkö ja miten hinta muodostuu?
+Tällä sivustolla esitetty hintadata on Pohjoismaiden ja Baltian maiden sähköpörssissä Nordpoolissa määräytynyt sähkön spot hinta. Päivän jokaiselle tunnille määräytyy kaupankäynnissä aina oma hintansa. Hinnan määräytyminen Pohjoismaissa perustuu neljällä markkina-alueella (Suomi, Norja, Ruotsi, Tanska) tapahtuvaan energianlähteiden (vesivoima, tuulivoima, ydinvoima sekä voimapolttoaineet kivihiili, öljy, maakaasu) tuotantoon ja niihin liittyvien päästöoikeuksien sääntelyyn (päästökauppa), sähkönkulutukseen sekä markkinapsykologiaan.
+
+Milloin seuraavan päivän hinnat julkaistaan?
+Seuraavan päivän hinnat julkaistaan n. klo 13.45 Suomen aikaa. Uudet hinnat päivittyvät tälle sivustolle pian sen jälkeen.
+
+Mitkä tekijät vaikuttavat sähkön hintaan?
+Hintaan vaikuttavia tekijöitä on lukuisia. Yleisin syy hinnan vaihteluun on vallitseva sää Suomessa, sekä maissa joista Suomeen ostetaan sähköä. Runsaat sateet etenkin Norjassa lisäävät vesivoiman kapasiteettia ja laskee hintaa. Kovat tuulet puolestaan lisäävät tuulivoimaloiden tuotantoa. Lisäksi hintaan vaikuttaa voimalaitosten, erityisesti ydinvoimaloiden huoltokatkot, mitkä aiheuttavat sähkön hintaan piikkejä. Viimeisimpänä hintaan vaikuttaa tietenkin kysyntä. Kylminä talvina sähkön hinta pysyy selvästi tavallista korkeammalla, kun lämmitykselle on suurempi tarve. Kesällä puolestaan sähkön hinta on tyypillisesti alempana, joskin voimalaitosten huoltoja suoritetaan usein kesäaikaan. Lisää asiaa sähkön hinnasta wikipediassa.
+
+Voinko hyötyä sähkön hinnan vaihtelusta?
+Voit. Jokainen voi hankkia pörssisähköön perustuvan sähkösopimuksen, jolloin sähkön käytön ajoittaminen edullisille tunneille voi merkittävästi alentaa sähkölaskua, etenkin jos käytössä on esimerkiksi sähkölämmitys. Jos kuitenkin haluat käyttää sähköä milloin huvittaa, tai et ole kiinnostunut seuraamaan hinnan vaihteluita, on parempi pysytellä kiinteähintaisessa sopimuksessa.
+
+
+Hyödynnä edulliset tunnit ja hanki Fortumin pörssisähkösopimus tästä
+
+Milloin sähkö on edullisinta?
+Sähkö on pääsääntöisesti edullisinta kun kysyntää on vähän, eli yöaikaan ja viikonloppuisin. Keskimäärin edullisimpia tuntihintoja voi tarkastella alla olevasta kuvaajasta.

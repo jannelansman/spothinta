@@ -1,0 +1,257 @@
+import requests
+import pandas as pd
+import numpy as np
+import io
+import re
+import sqlite3
+import pytz
+import datetime
+import logging
+
+logging.basicConfig(filename='entso_e.log', level=logging.DEBUG, format='%(levelname)s:%(asctime)s:%(message)s')
+
+class BadDataFrameError(Exception):
+    """Raised if received Pandas dataframe is not what expected."""
+
+class Entso:
+    def __init__(self):
+        logging.info(f"Initializing instance of class Entso.")
+        self.con = sqlite3.connect('spotprice.db')
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def runUpdate(self):
+        cet_timezone = pytz.timezone('CET')
+        utcNowString = datetime.datetime.now(cet_timezone).strftime("%d.%m.%Y")
+        utcTomorrowString = (datetime.datetime.now() + datetime.timedelta(days=1)).strftime("%d.%m.%Y")
+        
+        df = self.readSql()
+        missingDays = self._getMissingDays(df)
+        if missingDays:
+            dfList = self.getDays(missingDays)
+            if dfList:
+                newDf = pd.concat(dfList)
+                self.writeSql(newDf)
+        if dfList and dfList[-1].shape[0] == 23:
+            print("Database should be up to date.")
+            return
+        elif missingDays[-1] == utcNowString:
+            dfList = self.getDays(utcTomorrowString)
+            newDf = pd.concat(dfList)
+            self.writeSql(newDf)
+        else:
+            print("Shouldn't end up here.")
+        return
+
+    def _getDay(self, date):
+        """
+        Takes a datetime-string as an argument and returns corresponding Pandas
+        DataFrame in UTC-time.
+        """
+        logging.info(f"In _getDay())")
+
+        try:
+            tmp = self._getHtmlByDate(date)
+        except Exception as e:
+            logging.error("Error in _getHtmlByDate(). {e}")
+            print(f"Error in _getHtmlByDate(). {e}")
+            raise
+        try:
+            tmp = self._dateHtmlTupleToPandasDateDataframeTuple(tmp)
+        except Exception as e:
+            logging.error("Error in _dateHtmlTupleToPandasDateDataframeTuple(). {e}")
+            print(f"Error in _dateHtmlTupleToPandasDateDataframeTuple(). {e}")
+            raise
+        try:
+            tmp = self._parseDateDataframeTuple(tmp)
+        except Exception as e:
+            logging.error("Error in _dateHtmlTupleToPandasDateDataframeTuple(). {e}")
+            print(f"Error in _dateHtmlTupleToPandasDateDataframeTuple(). {e}")
+            raise
+        return tmp
+
+    def getDays(self, missingDays):
+        """
+        Takes list of datetime-strings as an argument and returns corresponding
+        spotprice-data as Pandas dataframe.
+        """
+        logging.info(f"In self.getDays()")
+        cet_timezone = pytz.timezone('CET')
+        utcNowString = datetime.datetime.now(cet_timezone).strftime("%d.%m.%Y")
+        dfList = []
+        for day in missingDays:
+            if not utcNowString == day:
+                newDf = self._getDay(day)
+                if isinstance(newDf, pd.core.frame.DataFrame):
+                    dfList.append(newDf)
+                else:
+                    print("Received bad df.")
+                    print(newDf)
+                    raise BadDataFrameError("Received erraneous Pandas dataframe.")
+        return dfList
+
+    def readSql(self):
+        logging.info(f" self.readSql()")
+        df = pd.read_sql(con=self.con, sql="SELECT * FROM spotprice ORDER BY epochTime", index_col="epochTime")
+        df = df.loc[~df.index.duplicated()]
+        df.sort_index(inplace=True)
+        return df
+
+    def writeSql(self, df):
+        df.to_sql(con=self.con, name='spotprice', if_exists='append')
+        print("New data appended to database.")
+        return
+    
+    def _getHtmlByDate(self, date):
+        logging.info(f"In self._getHtmlByDate()")
+        # Checks that date is a string.
+        if not isinstance(date, str):
+            print()
+            raise TypeError(f"Expected function argument to be a string, got {type(date).__name__} instead.")
+        # Checks that format of the given date is correct            
+        if not self._checkDateFormat(date):
+            raise ValueError(f"Date string does not match expected format DD.MM.YYYY: {date}")
+        
+        base_url = "https://transparency.entsoe.eu/transmission-domain/r2/dayAheadPrices/show"
+
+        params = {
+            "name": "",
+            "defaultValue": "false",
+            "viewType": "TABLE",
+            "areaType": "BZN",
+            "atch": "false",
+            "dateTime.dateTime": f"{date} 00:00|UTC|DAY",
+            "biddingZone.values": "CTY|10YFI-1--------U!BZN|10YFI-1--------U",
+            "resolution.values": "PT60M", # E.g. "PT60M" equals to 60 minute resolution
+            "dateTime.timezone": "UTC",
+            "dateTime.timezone_input": "UTC"
+        }
+
+        r = requests.get(base_url, params=params)
+        r.raise_for_status()
+        return (date, r.text)
+        
+    def _dateHtmlTupleToPandasDateDataframeTuple(self, dateHtmlTuple):
+        logging.info(f"In self._dateHtmlTupleToPandasDateDataframeTuple()")
+        date, html = dateHtmlTuple
+        dflist = pd.read_html(io.StringIO(html))
+        if len(dflist) == 1:
+            return (date, dflist[0])
+        else:
+            print(f"Expected the html to contain 1 table. The html contained {len(dflist)} tables.")
+            return False
+        
+    def _parseDateDataframeTuple(self, dateDataframeTuple):
+        logging.info(f"In self._parseDateDataframeTuple()")
+        # Remember to have the Dataframe prices to be checked for '-' entries and those rows removed.
+        date, df = dateDataframeTuple
+        expected_columns = pd.MultiIndex.from_tuples([
+            ('MTU', 'MTU'),
+            ('Day-ahead Price', '[EUR / MWh]')
+        ])
+        if not df.columns.equals(expected_columns):
+            print("Columns of the Dataframe were not as expected. Got {df.columns}")
+            print(df)
+            return False
+        
+        # If columns were as expected, temporarily rename the columns.
+        df.columns = range(len(df.columns))
+
+        # Change the price types from strings to numeric and replace non-convertible values to 'NaN'.
+        df[1] = pd.to_numeric(df[1], errors='coerce')
+
+        # Drop the rows where price didn't convert to numerical value.
+        df.dropna(subset=[1], inplace=True)
+
+        # Parses the time to timestring format '%d.%m.%Y %H:%M'.     
+        df["utcString"] = df[0].apply(lambda x: date + ' ' + x[:5])
+        df["utcTime"] = pd.to_datetime(df["utcString"], utc=True, format="%d.%m.%Y %H:%M")
+        df["epochTime"] = df["utcTime"].astype(np.int64)
+        df["Aika"] = pd.DatetimeIndex(df.epochTime).tz_localize("UTC").tz_convert("EET").strftime("%Y-%m-%d %H:%M")
+        df["Hinta €/kWh"] = df[1]/1000
+        df["Hinta snt/kWh"] = df[1]/10
+        df["Alv-hinta snt/kWh"] = df["Hinta snt/kWh"]*1.24
+        # 10% poikkeus-ALV:t välillä 01.12.2022 - 30.04.2023.
+        if df.loc[("2022-12" < df.Aika) & (df.Aika < "2023-05")].shape[0] > 0:
+            df.loc[("2022-12" < df.Aika) & (df.Aika < "2023-05"), ["Alv-hinta snt/kWh"]] = df.loc[("2022-12" < df.Aika) & (df.Aika < "2023-05"), ["Hinta snt/kWh"]]*1.1
+        df.set_index("epochTime", inplace=True) # Make sure this is done before selecting the remaining columns.
+        df = df[['Aika', 'Hinta €/kWh', 'Hinta snt/kWh', 'Alv-hinta snt/kWh']]
+        return df
+        
+    def _checkDateFormat(self, date):
+        logging.info(f"In self._checkDateFormat(). Date string: {date}")
+        # Then checks that the string format is expected.
+        pattern = r'^\d{2}\.\d{2}\.\d{4}$'
+        if re.match(pattern, date):
+            return True
+        else:
+            return False
+
+    def _getMissingDays(self, df):
+        """
+        Takes in epoch times from Pandas dataframe. Finds out if the data has
+        gaps. And if it does, returns those gap days in '%d.%m.%Y'-format.
+        """
+        logging.info(f"In self._getMissingDays()")
+        firstEpoch = 1418770800000000000
+        cet_timezone = pytz.timezone('CET')
+        datetime_now = datetime.datetime.now(cet_timezone)
+        nowEpoch = int((datetime_now.timestamp()//3600*3600)*1e9)
+        periods = int((nowEpoch - firstEpoch)/(3600*1e9))
+        hourEpochs = {int(firstEpoch + i*3600*1e9) for i in range(periods + 1)}
+        # Checks up to current time.
+        if df.shape[0] == 1:
+            missingEpochs = list(hourEpochs - set(df.index.to_list()))
+        elif df.shape[0] > 1:
+            missingEpochs = list(hourEpochs - set(df.index))
+        else:
+            print("Nothing found missing.")
+            return False
+        missingEpochs.sort()
+        dayEpochs = list({int(i//(86400*1e9)*(86400*1e9)) for i in missingEpochs})
+        dayEpochs.sort()
+        missingDays = [datetime.datetime.utcfromtimestamp(i/1e9).strftime("%d.%m.%Y") for i in dayEpochs]
+        if len(missingDays) > 0:
+            return missingDays
+        else:
+            return False
+
+"""
+Kuinka updateta kaikki aukot hintahistorian ajalta: CET 17.12.2014 - 
+tämänpäiväinen/huominen CET. Jos syöttää päivän UTC:nä, niin yksi
+tunneista lipsahtaa jopa 16.12.2014 puolelle.
+
+Data on parasta hakea aina UTC:nä, sillä muilla aikavyöhykkeillä kesä-
+aikaan siirtyminen ja siitä poistuminen aiheuttaa epäsäännöllisyyksiä
+dataan, jotka täytyisi hoitaa käsin. Lisäongelmia tulee siitä, että 
+kesäajasta tullaan todennäköisesti luopumaan, mutta ajankohdasta ei ole
+tietoa. Joten käytännössä UTC on ainoa järkevä vaihtoehto.
+
+Voidaan jakaa datan haku kahteen osaan. Ensiksi historian alusta 
+meneillään olevaan ajanhetkeen. Ja toiseksi, jos meneillään olevan
+ajanhetken UTC-päivästä "puuttuu" yksi tunti, niin tarkoittaa se sitä,
+ettei seuraavaa päivää ole vielä päivitetty ja tilastot on jo ajan
+tasalla. Jos meneillään olevan ajanhetken UTC-päivässä on jo kaikki 24
+tuntia, tarkoittaa se sitä, että seuraavankin päivän data on jo
+haettavissa.
+
+Tarkistetaan ensin kaikki uniikit UTC-päivät, jotka datasta puuttuu
+meneillään olevasta ajanhetkestä taaksepäin. Tämä tapahtuu selvittämällä
+ensin kaikki epoch-ajat, jotka datasta puuttuu. Sitten noita epoch-
+aikoja vastaavat UTC-päivät ja sitten otetaan noista päivistä vain 
+uniikit päivät.
+
+Pythonin time ei näihin taitu, koska ei pysty käsittelemään
+eri aikavyöhykkeitä. Joudutaan käyttämään datetime:ä ja pytz:iä.
+"""
+
+def main():
+    logging.info("In main(). Application is starting.")
+    e = Entso()
+
+if __name__ == '__main__':
+    main()
