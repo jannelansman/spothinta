@@ -1,4 +1,3 @@
-import os
 import requests
 import polars as pl
 import datetime
@@ -46,13 +45,18 @@ class Entso:
         cet_timezone = self.cet_timezone
         df = self.df
         cetTimeNow = datetime.datetime.now(cet_timezone)
-        cetTimeTomorrowCutoff = (datetime.datetime.now(cet_timezone) + datetime.timedelta(days=1)).replace(hour=23, minute=0, second=0, microsecond=0)
+        cetTimeTomorrowCutoff = (datetime.datetime.now(cet_timezone) + datetime.timedelta(days=1))
+        cetTimeTomorrowCutoff = cetTimeTomorrowCutoff.replace(
+            hour=23, 
+            minute=0, 
+            second=0, 
+            microsecond=0)
         cetLastDbHour = df["utcTime"][-1].astimezone(cet_timezone)
         if cetTimeNow.hour < 12 and cetTimeNow.minute < 30:
             if cetLastDbHour < cetTimeNow:
                 return False
         elif cetLastDbHour < cetTimeTomorrowCutoff:
-                return False
+            return False
         else:
             return True
         
@@ -149,19 +153,20 @@ class Entso:
         utcTime = pl.select(startUtf + timeDeltas)["start"].alias("utcTime")
         df = df.with_columns(utcTime)
         df = df.with_columns(pl.col("utcTime").dt.timestamp().alias("epochTime"))
-        df = df.sort("epochTime")
-        df = df.with_columns(df["utcTime"].dt.timestamp().map_elements(lambda x: datetime.datetime.fromtimestamp(x/1e6).strftime("%d.%m.%Y %H:%M")).alias("Aika"))
+        df = df.sort("epochTime")       
+        df = df.with_columns(df["utcTime"].dt.timestamp().map_elements(
+            lambda x: datetime.datetime.fromtimestamp(
+                x/1e6, tz=self.eet_timezone).strftime("%d.%m.%Y %H:%M")).alias("Aika"))
 
         # Timezones
         df = df.with_columns(df["utcTime"].dt.replace_time_zone("UTC"))
         df = df.with_columns(df["utcTime"].dt.convert_time_zone("Europe/Helsinki").alias("eetTime"))
         
-        """
-        Taking into account the period of exceptional added value tax (ALV) and 
-        exclusion of ALV when the price is negative.
-        Start date of 10% ALV exception: "2022-12-01".
-        End date of 10% ALV exception: "2023-04-30".
-        """
+        # Taking into account the period of exceptional added value tax (ALV) and
+        # exclusion of ALV when the price is negative.
+        # Start date of 10% ALV exception: "2022-12-01".
+        # End date of 10% ALV exception: "2023-04-30".
+
         start_date = pl.datetime(2022, 12, 1, 0, time_zone="Europe/Helsinki")
         end_date = pl.datetime(2023, 5, 1, 0, time_zone="Europe/Helsinki")
         
@@ -234,18 +239,18 @@ class Entso:
         else:
             return False
         
-    def stdRound(self, value, decimal=0):
+    def stdRound(self, value, decimals=0):
         """
         Standard rounding. Returns a float.
         """
         from math import floor
-        if not isinstance(value, float):
-            raise TypeError("Expected value to be float.")
-        if not isinstance(decimal, int):
-            raise TypeError("Excpected decimal to be int.")
-        value = value*10**decimal
-        value = floor(value + 0.5)
-        return value/10**decimal
+        if not (isinstance(value, float) or isinstance(value, int)):
+            raise TypeError(f"Expected value to round to be type int or type float, but the type was: {type(value)}.")
+        if not isinstance(decimals, int):
+            raise TypeError(f"Expected number of decimals to be type int, but the type was: {type(decimals)}.")
+        value = value*10**decimals
+        value = int(value + 0.5)
+        return value/10**decimals
     
 def main():
     e = Entso()
