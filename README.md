@@ -2,7 +2,7 @@
 
 ## Short description
 
-The goal of the project as whole is to simply create a graphical representation of Finnish electricity day ahead spot prices to be displayed on a website.
+The goal of the project as whole is to simply create a graphical representation of Finnish electricity day ahead spot prices to be displayed on a website. Earlier implemenation of the project can be viewed in [spothinta](https://truelemmings.fi/spothinta), albeit with a different folder structure.
 
 ## Backend
 
