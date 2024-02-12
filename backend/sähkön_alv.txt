@@ -1,0 +1,1 @@
+Sähkön arvonlisä vero oli 1.12.2022 ja 30.4.2023 välisenä aikana 10% normaalin 24% sijaan. Poikkeus-alv on huoomioitu hinta-datassa ja sen parsimisessa.
