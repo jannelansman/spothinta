@@ -2,7 +2,7 @@
 
 ## Short description
 
-- The goal of the project as whole is to simply create a graphical representation of Finnish electricity day ahead spot prices to be displayed on a website.
+The goal of the project as whole is to simply create a graphical representation of Finnish electricity day ahead spot prices to be displayed on a website.
 
 ## Backend
 
@@ -14,7 +14,7 @@ The day ahead prices are typically released around 14.00 EET/EEST for when the e
 
 ## Frontend
 
-- Frontend (HTML, CSS, PHP, JavaScript). PHP to read and truncate the JSON data and JavaScript to graph it. 
+Frontend (HTML, CSS, PHP, JavaScript). PHP to read and truncate the JSON data and JavaScript to graph it. 
 
 ## Dependencies
 
