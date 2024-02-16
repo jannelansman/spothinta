@@ -19,10 +19,10 @@ Frontend (HTML, CSS, PHP, JavaScript). PHP to read and truncate the JSON data an
 ## Dependencies
 
 ### Python
-- requests (http request)
 - datetime (parsing and conversion of datetime)
-- pytz (time zones)
 - re (regular expressions)
-- Beautiful Soup (parsing xml files)
-- Polars (handling the parsed data)
 - json (reading and writing JSON files)
+- requests (http request)
+- Polars (handling the parsed data)
+- pytz (time zones)
+- Beautiful Soup (parsing xml files)
